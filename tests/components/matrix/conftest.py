@@ -226,17 +226,8 @@ def mock_allowed_path():
 
 
 @pytest.fixture
-async def mock_send_message():
-    async def wrap_send_message(*args, **kwargs):
-        pass
-
-    with patch.object(MatrixBot, "_handle_multi_room_send", wraps=wrap_send_message) as mock:
-        yield mock
-
-
-@pytest.fixture
 async def matrix_bot(
-    hass: HomeAssistant, mock_client, mock_save_json, mock_allowed_path, mock_send_message
+    hass: HomeAssistant, mock_client, mock_save_json, mock_allowed_path
 ) -> MatrixBot:
     """Set up Matrix and Notify component.
 
@@ -248,9 +239,11 @@ async def matrix_bot(
     await hass.async_block_till_done()
     assert isinstance(matrix_bot := hass.data[MATRIX_DOMAIN], MatrixBot)
 
-    await hass.async_start()
-
-    return matrix_bot
+    with patch.object(
+        matrix_bot, "_handle_multi_room_send", wraps=matrix_bot._handle_multi_room_send
+    ) as mock:
+        await hass.async_start()
+        yield matrix_bot
 
 
 @pytest.fixture
